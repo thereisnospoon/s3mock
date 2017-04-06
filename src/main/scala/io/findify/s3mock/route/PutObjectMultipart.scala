@@ -1,6 +1,7 @@
 package io.findify.s3mock.route
 
-import akka.http.scaladsl.model.{HttpRequest, HttpResponse, StatusCodes}
+import akka.http.scaladsl.model.headers.ETag
+import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
 import akka.http.scaladsl.server.Directives._
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
@@ -9,8 +10,8 @@ import com.typesafe.scalalogging.LazyLogging
 import io.findify.s3mock.S3ChunkedProtocolStage
 import io.findify.s3mock.error.{InternalErrorException, NoSuchBucketException}
 import io.findify.s3mock.provider.Provider
+import org.apache.commons.codec.digest.DigestUtils
 
-import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -35,7 +36,9 @@ case class PutObjectMultipart(implicit provider:Provider, mat:Materializer) exte
         .fold(ByteString(""))(_ ++ _)
         .map(data => {
           Try(provider.putObjectMultipartPart(bucket, path, partNumber.toInt, uploadId, data.toArray)) match {
-            case Success(()) => HttpResponse(StatusCodes.OK)
+            case Success(()) =>
+              logger.debug("Giving response with etag")
+              HttpResponse(StatusCodes.OK, headers = List(ETag(DigestUtils.md5Hex(data.toArray))))
             case Failure(e: NoSuchBucketException) =>
               HttpResponse(
                 StatusCodes.NotFound,
@@ -55,11 +58,11 @@ case class PutObjectMultipart(implicit provider:Provider, mat:Materializer) exte
   def completeSigned(bucket:String, path:String, partNumber:Int, uploadId:String) = extractRequest { request =>
     complete {
       val result = request.entity.dataBytes
-        .via(new S3ChunkedProtocolStage)
-        .fold(ByteString(""))(_ ++ _)
         .map(data => {
           Try( provider.putObjectMultipartPart(bucket, path, partNumber.toInt, uploadId, data.toArray)) match {
-            case Success(()) => HttpResponse(StatusCodes.OK)
+            case Success(()) =>
+              logger.debug("Giving response with etag")
+              HttpResponse(StatusCodes.OK, headers = List(ETag(DigestUtils.md5Hex(data.toArray))))
             case Failure(e: NoSuchBucketException) =>
               HttpResponse(
                 StatusCodes.NotFound,
