@@ -58,6 +58,7 @@ case class PutObjectMultipart(implicit provider:Provider, mat:Materializer) exte
   def completeSigned(bucket:String, path:String, partNumber:Int, uploadId:String) = extractRequest { request =>
     complete {
       val result = request.entity.dataBytes
+        .fold(ByteString(""))(_ ++ _)
         .map(data => {
           Try( provider.putObjectMultipartPart(bucket, path, partNumber.toInt, uploadId, data.toArray)) match {
             case Success(()) =>
