@@ -18,11 +18,14 @@ import scala.util.{Failure, Success, Try}
   * Created by shutty on 8/19/16.
   */
 case class PutObjectMultipart(implicit provider:Provider, mat:Materializer) extends LazyLogging {
-  def route(bucket:String, path:String) = parameter('partNumber, 'uploadId) { (partNumber:String, uploadId:String) =>
+  def route(bucket: String, path: String) = parameter('partNumber, 'uploadId) { (partNumber: String, uploadId: String) =>
     put {
       logger.debug(s"put multipart object bucket=$bucket path=$path")
-      headerValueByName("authorization") { auth =>
-        completeSigned(bucket, path, partNumber.toInt, uploadId)
+      headerValueByName("x-amz-content-sha256") { hv =>
+        if (hv == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD")
+          completeSigned(bucket, path, partNumber.toInt, uploadId)
+        else
+          reject
       } ~ completePlain(bucket, path, partNumber.toInt, uploadId)
     } ~ post {
       logger.debug(s"post multipart object bucket=$bucket path=$path")
@@ -37,7 +40,6 @@ case class PutObjectMultipart(implicit provider:Provider, mat:Materializer) exte
         .map(data => {
           Try(provider.putObjectMultipartPart(bucket, path, partNumber.toInt, uploadId, data.toArray)) match {
             case Success(()) =>
-              logger.debug("Giving response with etag")
               HttpResponse(StatusCodes.OK, headers = List(ETag(DigestUtils.md5Hex(data.toArray))))
             case Failure(e: NoSuchBucketException) =>
               HttpResponse(
@@ -58,11 +60,11 @@ case class PutObjectMultipart(implicit provider:Provider, mat:Materializer) exte
   def completeSigned(bucket:String, path:String, partNumber:Int, uploadId:String) = extractRequest { request =>
     complete {
       val result = request.entity.dataBytes
+        .via(new S3ChunkedProtocolStage)
         .fold(ByteString(""))(_ ++ _)
         .map(data => {
           Try( provider.putObjectMultipartPart(bucket, path, partNumber.toInt, uploadId, data.toArray)) match {
             case Success(()) =>
-              logger.debug("Giving response with etag")
               HttpResponse(StatusCodes.OK, headers = List(ETag(DigestUtils.md5Hex(data.toArray))))
             case Failure(e: NoSuchBucketException) =>
               HttpResponse(
