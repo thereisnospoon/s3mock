@@ -11,12 +11,17 @@ import io.findify.s3mock.route.{PutObject, _}
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
+
 /**
   * Created by shutty on 8/9/16.
   */
-class S3Mock(port:Int, provider:Provider)(implicit system:ActorSystem = ActorSystem.create("s3mock")) extends LazyLogging {
+class S3Mock(host: String, port: Int, provider: Provider)(implicit system: ActorSystem = ActorSystem.create("s3mock"))
+    extends LazyLogging {
+
+  def this(port: Int, provider: Provider) = this("localhost", port, provider)
+
   implicit val p = provider
-  private var bind:Http.ServerBinding = _
+  private var bind: Http.ServerBinding = _
 
   val chunkSignaturePattern = """([0-9a-fA-F]+);chunk\-signature=([a-z0-9]){64}""".r
 
@@ -58,15 +63,14 @@ class S3Mock(port:Int, provider:Provider)(implicit system:ActorSystem = ActorSys
         }
       }
 
-    bind = Await.result(http.bindAndHandle(route, "localhost", port), Duration.Inf)
+    bind = Await.result(http.bindAndHandle(route, host, port), Duration.Inf)
     bind
   }
 
   def stop = Await.result(bind.unbind(), Duration.Inf)
-
 }
 
 object S3Mock {
-  def apply(port:Int, dir:String) = new S3Mock(port, new FileProvider(dir))
-  def create(port:Int, dir:String) = apply(port, dir) // Java API
+  def apply(port: Int, dir: String) = new S3Mock(port, new FileProvider(dir))
+  def create(port: Int, dir: String): S3Mock = apply(port, dir) // Java API
 }

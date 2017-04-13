@@ -39,15 +39,16 @@ publishTo := {
     Some("releases"  at nexus + "service/local/staging/deploy/maven2")
 }
 
-pomExtra := (
-    <scm>
-      <url>git@github.com:findify/s3mock.git</url>
-      <connection>scm:git:git@github.com:findify/s3mock.git</connection>
-    </scm>
-    <developers>
-      <developer>
-        <id>romangrebennikov</id>
-        <name>Roman Grebennikov</name>
-        <url>http://www.dfdx.me</url>
-      </developer>
-    </developers>)
+pomExtra := <scm>
+  <url>git@github.com:findify/s3mock.git</url>
+  <connection>scm:git:git@github.com:findify/s3mock.git</connection>
+</scm>
+  <developers>
+    <developer>
+      <id>romangrebennikov</id>
+      <name>Roman Grebennikov</name>
+      <url>http://www.dfdx.me</url>
+    </developer>
+  </developers>
+
+test in assembly := {}

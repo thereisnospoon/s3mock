@@ -1,14 +1,15 @@
 package io.findify.s3mock
 
 import better.files.File
+import com.typesafe.config.ConfigFactory
 import io.findify.s3mock.provider.FileProvider
 
-/**
-  * Created by shutty on 8/9/16.
-  */
-object Main {
-  def main(args: Array[String]): Unit = {
-    val server = new S3Mock(8001, new FileProvider(File.newTemporaryDirectory(prefix = "s3mock").pathAsString))
-    server.start
-  }
+object Main extends App {
+
+  val config = ConfigFactory.load().getConfig("s3mock")
+  val port = config.getInt("port")
+  val host = config.getString("host")
+
+  val server = new S3Mock(host, port, new FileProvider(File.newTemporaryDirectory(prefix = "s3mock").pathAsString))
+  server.start
 }
