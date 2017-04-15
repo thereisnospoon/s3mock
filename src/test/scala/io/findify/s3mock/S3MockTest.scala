@@ -1,6 +1,7 @@
 package io.findify.s3mock
 
 import better.files.File
+import com.amazonaws.auth.{AWSCredentials, AWSCredentialsProvider, BasicAWSCredentials}
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.amazonaws.services.s3.model.S3Object
@@ -16,6 +17,11 @@ trait S3MockTest extends FlatSpec with Matchers with BeforeAndAfterAll {
 
   val s3 = AmazonS3ClientBuilder.standard()
     .withEndpointConfiguration(new EndpointConfiguration("http://127.0.0.1:8001", ""))
+    .withCredentials(
+      new AWSCredentialsProvider {
+        override def refresh(): Unit = {}
+        override def getCredentials: AWSCredentials = new BasicAWSCredentials("1", "2")
+      })
     .build()
 
   val workDir = File.newTemporaryDirectory().pathAsString
