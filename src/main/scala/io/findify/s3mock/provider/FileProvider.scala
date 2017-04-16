@@ -138,4 +138,5 @@ class FileProvider(dir:String) extends Provider with LazyLogging {
     metadataStore.remove(bucket)
   }
 
+  override def getObjectLength(bucket: String, key: String): Long = File(s"$dir/$bucket/$key").size
 }

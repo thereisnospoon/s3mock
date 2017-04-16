@@ -48,6 +48,7 @@ class S3Mock(host: String, port: Int, provider: Provider)(implicit system: Actor
             concat(
               GetObject().route(bucket, key.toString(), params),
               CopyObject().route(bucket, key.toString()),
+              PatchObject().route(bucket, key.toString),
               PutObjectMultipart().route(bucket, key.toString()),
               PutObjectMultipartStart().route(bucket, key.toString()),
               PutObjectMultipartComplete().route(bucket, key.toString()),
